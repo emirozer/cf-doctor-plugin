@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cloudfoundry/cli/cf/terminal"
 	"github.com/cloudfoundry/cli/plugin"
@@ -31,7 +32,44 @@ type DoctorPlugin struct {
 *	1 should the plugin exits nonzero.
  */
 func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
-	return
+	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
+
+	c.CFChecks(cliConnection)
+
+	appsListing, err := cliConnection.GetApps()
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+	for _, app := range appsListing {
+		c.ui.Say(app.Name)
+	}
+
+}
+
+// CFChecks is responsible if the environment is okay for running doctor
+func (c *DoctorPlugin) CFChecks(cliConnection plugin.CliConnection) {
+	cliLogged, err := cliConnection.IsLoggedIn()
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+
+	cliHasOrg, err := cliConnection.HasOrganization()
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+
+	cliHasSpace, err := cliConnection.HasSpace()
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+
+	if cliLogged == false {
+		panic("doctor cannot work without being logged in to CF")
+	}
+
+	if cliHasOrg == false || cliHasSpace == false {
+		c.ui.Warn("WARN: It seems that your cf cluster has no space or org...")
+	}
 }
 
 /*
