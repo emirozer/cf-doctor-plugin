@@ -1,11 +1,21 @@
 #CloudFoundry CLI Plugin - Doctor
 
-WIP
+This plugin is obviously inspired from [brew](http://brew.sh/) doctor :) it will scan your cf cluster to see if there are anomalies or useful action points that it can report back to you. Current functionality is only focused on apps and routes.. Still kind of a WIP.
 
+
+### Installation
+
+The latest binaries for this plugin will be provided in the bin folder of the repository. You can also cross compile with the build.sh script in bin folder.
+
+Run **cf install-plugin BINARY_FILENAME** to install a plugin. Replace **BINARY_FILENAME** with the path to and name of the binary file.
+
+After installation just run:
+
+    cf doctor
 
 ##Licence
 
- Copyright [2015] [Emir Ozer]
+ Copyright 2015 Emir Ozer
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
