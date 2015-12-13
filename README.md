@@ -5,7 +5,7 @@ This plugin is obviously inspired from [brew](http://brew.sh/) doctor :) it will
 
 ### Installation
 
-The latest binaries for this plugin will be provided in the bin folder of the repository. You can also cross compile with the build.sh script in bin folder.
+Get the latest release in binaries depending on your os/arch here: <https://github.com/emirozer/cf-doctor-plugin/releases>
 
 Run **cf install-plugin BINARY_FILENAME** to install a plugin. Replace **BINARY_FILENAME** with the path to and name of the binary file.
 
