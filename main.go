@@ -34,20 +34,34 @@ type DoctorPlugin struct {
 func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
 
-	c.CFChecks(cliConnection)
+	c.CFMainChecks(cliConnection)
 
-	appsListing, err := cliConnection.GetApps()
-	if err != nil {
-		c.ui.Failed(err.Error())
-	}
-	for _, app := range appsListing {
-		c.ui.Say(app.Name)
+	listOfRunningApps := c.AppsStateRunning(cliConnection)
+
+	for _, app := range listOfRunningApps {
+		c.ui.Say(app)
 	}
 
 }
 
-// CFChecks is responsible if the environment is okay for running doctor
-func (c *DoctorPlugin) CFChecks(cliConnection plugin.CliConnection) {
+// AppsStateRunning will return a list of app whose state is running
+func (c *DoctorPlugin) AppsStateRunning(cliConnection plugin.CliConnection) []string {
+	var res []string
+	appsListing, err := cliConnection.GetApps()
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+
+	for _, app := range appsListing {
+		if app.State == "started" {
+			res = append(res, app.Name)
+		}
+	}
+	return res
+}
+
+// CFMainChecks is responsible if the environment is okay for running doctor
+func (c *DoctorPlugin) CFMainChecks(cliConnection plugin.CliConnection) {
 	cliLogged, err := cliConnection.IsLoggedIn()
 	if err != nil {
 		c.ui.Failed(err.Error())
