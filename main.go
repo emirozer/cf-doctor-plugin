@@ -127,6 +127,10 @@ func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage ma
 				triage[i.Name] = "MemUsage lower than %15 percent of MemQuota, scaledown is an option."
 			}
 
+			if len(insts) > 1 && float64(ins.MemUsage) < float64(ins.MemQuota)*0.15 && ins.CpuUsage < 10.0 {
+				triage[i.Name] = "app has more than one instance running with very low resource consumption. candidate for scaling down."
+			}
+
 		}
 
 		routes := app.Routes
