@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/cloudfoundry/cli/cf/terminal"
 	"github.com/cloudfoundry/cli/plugin"
@@ -35,7 +37,7 @@ type DoctorPlugin struct {
  */
 func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	triageApps := make(map[string]string)
-	//triageRoutes := make(map[string]string)
+	var triageRoutes []string
 
 	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
 
@@ -43,6 +45,7 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 
 	listOfRunningApps := c.AppsStateRunning(cliConnection)
 	c.CheckUpApps(cliConnection, triageApps, listOfRunningApps)
+	triageRoutes = c.CheckUpRoutes(cliConnection, triageRoutes)
 
 	// doctor run results
 	var keysOfTriageApps []string
@@ -51,9 +54,35 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	}
 
 	sort.Strings(keysOfTriageApps)
+
 	for _, k := range keysOfTriageApps {
 		c.ui.Say(k + " " + triageApps[k])
 	}
+	for _, y := range triageRoutes {
+		c.ui.Say(y)
+	}
+}
+
+// CheckUpRoutes performs checkup on currently defined routes in cf cluster
+func (c *DoctorPlugin) CheckUpRoutes(cliConnection plugin.CliConnection, triageRoutes []string) []string {
+	results, err := cliConnection.CliCommandWithoutTerminalOutput("routes")
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+
+	for _, line := range results {
+		// regex to match cf routes output and see if there are unbound routes
+		match, _ := regexp.MatchString("^[a-zA-Z]*\\s*\\S*\\s*\\S*\\s*", line)
+		if match {
+			parts := strings.Fields(line)
+
+			if len(parts) == 3 {
+				triageRoutes = append(triageRoutes, "Following route has no app bound to it, Host: "+parts[1]+" Domain: "+parts[2])
+			}
+		}
+
+	}
+	return triageRoutes
 }
 
 // CheckUpApps performs checkup on running applications and adds the result to triage map
