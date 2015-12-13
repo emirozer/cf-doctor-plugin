@@ -36,11 +36,13 @@ type DoctorPlugin struct {
 *	1 should the plugin exits nonzero.
  */
 func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
+	fmt.Printf("\n\n")
 	triageApps := make(map[string]string)
 	var triageRoutes []string
 
 	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
-
+	c.ui.Say(terminal.WarningColor("doctor: time to triage cf cluster"))
+	fmt.Printf("\n")
 	c.CFMainChecks(cliConnection)
 
 	listOfRunningApps := c.AppsStateRunning(cliConnection)
@@ -56,10 +58,17 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	sort.Strings(keysOfTriageApps)
 
 	for _, k := range keysOfTriageApps {
-		c.ui.Say(k + " " + triageApps[k])
+
+		c.ui.Say(terminal.WarningColor(k+": ") + terminal.LogStderrColor(triageApps[k]))
 	}
-	for _, y := range triageRoutes {
-		c.ui.Say(y)
+	c.ui.Say(" ")
+
+	if len(triageRoutes) > 0 {
+		c.ui.Say(terminal.WarningColor("Following routes do not have any app bound to them:"))
+
+		for _, y := range triageRoutes {
+			c.ui.Say(terminal.LogStderrColor(y))
+		}
 	}
 }
 
@@ -77,7 +86,7 @@ func (c *DoctorPlugin) CheckUpRoutes(cliConnection plugin.CliConnection, triageR
 			parts := strings.Fields(line)
 
 			if len(parts) == 3 {
-				triageRoutes = append(triageRoutes, "Following route has no app bound to it, Host: "+parts[1]+" Domain: "+parts[2])
+				triageRoutes = append(triageRoutes, "Host: "+parts[1]+" Domain: "+parts[2])
 			}
 		}
 
