@@ -45,7 +45,8 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	c.CFMainChecks(cliConnection)
 
 	listOfRunningApps := c.AppsStateRunning(cliConnection)
-	triageApps = c.CheckUpApps(cliConnection, triageApps, listOfRunningApps)
+	listOfStoppedApps := c.AppsStateStopped(cliConnection)
+	triageApps = c.CheckUpApps(cliConnection, triageApps, listOfRunningApps, listOfStoppedApps)
 	triageRoutes = c.CheckUpRoutes(cliConnection, triageRoutes)
 
 	// doctor run results
@@ -87,8 +88,8 @@ func (c *DoctorPlugin) CheckUpRoutes(cliConnection plugin.CliConnection, triageR
 	return triageRoutes
 }
 
-// CheckUpApps performs checkup on running applications and adds the result to triage map
-func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage []string, listOfRunningApps []plugin_models.GetAppsModel) []string {
+// CheckUpApps performs checkup on applications and adds the result to triage map
+func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage []string, listOfRunningApps []plugin_models.GetAppsModel, listOfStoppedApps []plugin_models.GetAppsModel) []string {
 	const alarmCPU float64 = 85.0
 
 	for _, i := range listOfRunningApps {
@@ -132,6 +133,18 @@ func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage []
 			triage = append(triage, i.Name+"- You have a running application that does not have a route!")
 		}
 	}
+
+	for _, y := range listOfStoppedApps {
+		app, err := cliConnection.GetApp(y.Name)
+		if err != nil {
+			c.ui.Failed(err.Error())
+		}
+
+		if len(app.StagingFailedReason) > 0 {
+			triage = append(triage, y.Name+" - StagingFailedReason: "+app.StagingFailedReason)
+		}
+	}
+
 	return triage
 
 }
@@ -146,6 +159,22 @@ func (c *DoctorPlugin) AppsStateRunning(cliConnection plugin.CliConnection) []pl
 
 	for _, app := range appsListing {
 		if app.State == "started" {
+			res = append(res, app)
+		}
+	}
+	return res
+}
+
+// AppsStateStopped will return a list of app whose state is running
+func (c *DoctorPlugin) AppsStateStopped(cliConnection plugin.CliConnection) []plugin_models.GetAppsModel {
+	var res []plugin_models.GetAppsModel
+	appsListing, err := cliConnection.GetApps()
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+
+	for _, app := range appsListing {
+		if app.State == "stopped" {
 			res = append(res, app)
 		}
 	}
