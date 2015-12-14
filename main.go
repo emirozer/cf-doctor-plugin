@@ -106,11 +106,11 @@ func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage []
 
 		for _, ins := range insts {
 			if ins.CpuUsage > alarmCPU {
-				triage = append(triage, i.Name+" __ CPU usage over %85 percent!")
+				triage = append(triage, i.Name+" ___ CPU usage over %85 percent!")
 			}
 
 			if float64(ins.DiskUsage) > float64(ins.DiskQuota)*0.80 {
-				triage = append(triage, i.Name+" __ DiskUsage over %80 percent of DiskQuota")
+				triage = append(triage, i.Name+" ___ DiskUsage over %80 percent of DiskQuota")
 			}
 
 			if float64(ins.MemUsage) > float64(ins.MemQuota)*0.80 {
