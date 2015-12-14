@@ -15,6 +15,12 @@ After installation just run:
 
     cf doctor
 
+
+<br>
+##### Sample output
+![Screenshot](https://raw.github.com/emirozer/cf-doctor-plugin/master/docs/cfdoc.png)
+<br>
+
 ##Licence
 
  Copyright 2015 Emir Ozer

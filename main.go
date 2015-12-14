@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/cloudfoundry/cli/cf/terminal"
@@ -37,7 +36,7 @@ type DoctorPlugin struct {
  */
 func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	fmt.Printf("\n\n")
-	triageApps := make(map[string]string)
+	var triageApps []string
 	var triageRoutes []string
 
 	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
@@ -46,20 +45,14 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	c.CFMainChecks(cliConnection)
 
 	listOfRunningApps := c.AppsStateRunning(cliConnection)
-	c.CheckUpApps(cliConnection, triageApps, listOfRunningApps)
+	triageApps = c.CheckUpApps(cliConnection, triageApps, listOfRunningApps)
 	triageRoutes = c.CheckUpRoutes(cliConnection, triageRoutes)
 
 	// doctor run results
-	var keysOfTriageApps []string
-	for k := range triageApps {
-		keysOfTriageApps = append(keysOfTriageApps, k)
-	}
 
-	sort.Strings(keysOfTriageApps)
+	for _, v := range triageApps {
 
-	for _, k := range keysOfTriageApps {
-
-		c.ui.Say(terminal.WarningColor(k+": ") + terminal.LogStderrColor(triageApps[k]))
+		c.ui.Say(terminal.WarningColor(strings.Split(v, "-")[0]) + " - " + terminal.LogStderrColor(strings.Split(v, "-")[1]))
 	}
 	c.ui.Say(" ")
 
@@ -95,7 +88,7 @@ func (c *DoctorPlugin) CheckUpRoutes(cliConnection plugin.CliConnection, triageR
 }
 
 // CheckUpApps performs checkup on running applications and adds the result to triage map
-func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage map[string]string, listOfRunningApps []plugin_models.GetAppsModel) {
+func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage []string, listOfRunningApps []plugin_models.GetAppsModel) []string {
 	const alarmCPU float64 = 85.0
 
 	for _, i := range listOfRunningApps {
@@ -105,30 +98,30 @@ func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage ma
 		}
 
 		if len(app.StagingFailedReason) > 0 {
-			triage[i.Name] = "StagingFailedReason: " + app.StagingFailedReason
+			triage = append(triage, i.Name+" - StagingFailedReason: "+app.StagingFailedReason)
 		}
 
 		insts := app.Instances
 
 		for _, ins := range insts {
 			if ins.CpuUsage > alarmCPU {
-				triage[i.Name] = "CPU usage over %85 percent!"
+				triage = append(triage, i.Name+" - CPU usage over %85 percent!")
 			}
 
 			if float64(ins.DiskUsage) > float64(ins.DiskQuota)*0.80 {
-				triage[i.Name] = "DiskUsage over %80 percent of DiskQuota"
+				triage = append(triage, i.Name+" - DiskUsage over %80 percent of DiskQuota")
 			}
 
 			if float64(ins.MemUsage) > float64(ins.MemQuota)*0.80 {
-				triage[i.Name] = "MemUsage over %80 percent of MemQuota"
+				triage = append(triage, i.Name+" - MemUsage over %80 percent of MemQuota")
 			}
 
 			if float64(ins.MemUsage) < float64(ins.MemQuota)*0.15 {
-				triage[i.Name] = "MemUsage lower than %15 percent of MemQuota, scaledown is an option."
+				triage = append(triage, i.Name+" - MemUsage lower than %15 percent of MemQuota, scaledown is an option.")
 			}
 
 			if len(insts) > 1 && float64(ins.MemUsage) < float64(ins.MemQuota)*0.15 && ins.CpuUsage < 10.0 {
-				triage[i.Name] = "app has more than one instance running with very low resource consumption. candidate for scaling down."
+				triage = append(triage, i.Name+" - app has more than one instance running with very low resource consumption. candidate for scaling down.")
 			}
 
 		}
@@ -136,9 +129,10 @@ func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage ma
 		routes := app.Routes
 
 		if len(routes) == 0 {
-			triage[i.Name] = "You have a running application that does not have a route!"
+			triage = append(triage, i.Name+"- You have a running application that does not have a route!")
 		}
 	}
+	return triage
 
 }
 
