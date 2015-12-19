@@ -49,6 +49,11 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	triageApps = c.CheckUpApps(cliConnection, triageApps, listOfRunningApps, listOfStoppedApps)
 	triageRoutes = c.CheckUpRoutes(cliConnection, triageRoutes)
 
+	if len(triageApps) == 0 && len(triageRoutes) == 0 {
+		c.ui.Say(terminal.SuccessColor("doctor: Everything looks OK!"))
+		return
+	}
+
 	// doctor run results
 
 	for _, v := range triageApps {
