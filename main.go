@@ -38,6 +38,7 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	fmt.Printf("\n\n")
 	var triageApps []string
 	var triageRoutes []string
+	var triageServices []string
 
 	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
 	c.ui.Say(terminal.WarningColor("doctor: time to triage cf cluster"))
@@ -48,8 +49,9 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	listOfStoppedApps := c.AppsStateStopped(cliConnection)
 	triageApps = c.CheckUpApps(cliConnection, triageApps, listOfRunningApps, listOfStoppedApps)
 	triageRoutes = c.CheckUpRoutes(cliConnection, triageRoutes)
+	triageServices = c.CheckUpServices(cliConnection, triageServices)
 
-	if len(triageApps) == 0 && len(triageRoutes) == 0 {
+	if len(triageApps) == 0 && len(triageRoutes) == 0 && len(triageServices) == 0 {
 		c.ui.Say(terminal.SuccessColor("doctor: Everything looks OK!"))
 		return
 	}
@@ -66,6 +68,14 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 		c.ui.Say(terminal.WarningColor("Following routes do not have any app bound to them:"))
 
 		for _, y := range triageRoutes {
+			c.ui.Say(terminal.LogStderrColor(y))
+		}
+	}
+
+	if len(triageServices) > 0 {
+		c.ui.Say(terminal.WarningColor("Following services do not have any app bound to them:"))
+
+		for _, y := range triageServices {
 			c.ui.Say(terminal.LogStderrColor(y))
 		}
 	}
@@ -91,6 +101,28 @@ func (c *DoctorPlugin) CheckUpRoutes(cliConnection plugin.CliConnection, triageR
 
 	}
 	return triageRoutes
+}
+
+// CheckUpServices performs checkup on currently defined services in cf cluster
+func (c *DoctorPlugin) CheckUpServices(cliConnection plugin.CliConnection, triageServices []string) []string {
+	results, err := cliConnection.CliCommandWithoutTerminalOutput("services")
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+	// FIX ME
+	for _, line := range results {
+		// regex to match cf services output and see if there are unbound services
+		match, _ := regexp.MatchString("^\\S*\\s*\\S*\\s*\\S*\\s*\\S*\\s*\\S*", line)
+		if match {
+			parts := strings.Fields(line)
+
+			if len(parts) == 4 {
+				triageServices = append(triageServices, "Service: "+parts[1]+" Name: "+parts[0])
+			}
+		}
+
+	}
+	return triageServices
 }
 
 // CheckUpApps performs checkup on applications and adds the result to triage map
