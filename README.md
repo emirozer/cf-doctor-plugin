@@ -1,6 +1,6 @@
 #CloudFoundry CLI Plugin - Doctor
 
-This plugin is obviously inspired from [brew](http://brew.sh/) doctor :) it will scan your cf cluster to see if there are anomalies or useful action points that it can report back to you. Current functionality is only focused on apps and routes..
+This plugin is obviously inspired from [brew](http://brew.sh/) doctor :) it will scan your cloudfoundry to see if there are anomalies or useful action points that it can report back to you. Current functionality is only focused on apps and routes..
 This plugin does *not* change any state or configuration, it merely just scans and gathers information than reports back anomalies.
 
 List of all plugins available: <http://plugins.cloudfoundry.org/ui/>
