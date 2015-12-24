@@ -41,7 +41,7 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	var triageServices []string
 
 	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
-	c.ui.Say(terminal.WarningColor("doctor: time to triage cf cluster"))
+	c.ui.Say(terminal.WarningColor("doctor: time to triage cloudfoundry"))
 	fmt.Printf("\n")
 	c.CFMainChecks(cliConnection)
 
@@ -57,10 +57,12 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	}
 
 	// doctor run results
+	if len(triageApps) > 0 {
+		c.ui.Say(terminal.WarningColor("Detected triage points for apps: "))
+		for _, v := range triageApps {
 
-	for _, v := range triageApps {
-
-		c.ui.Say(terminal.WarningColor(strings.Split(v, "___")[0]) + " - " + terminal.LogStderrColor(strings.Split(v, "___")[1]))
+			c.ui.Say(terminal.LogStderrColor(strings.Split(v, "___")[0]+" <---> ") + terminal.LogStderrColor(strings.Split(v, "___")[1]))
+		}
 	}
 	c.ui.Say(" ")
 
@@ -71,7 +73,7 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 			c.ui.Say(terminal.LogStderrColor(y))
 		}
 	}
-
+	fmt.Printf("\n")
 	if len(triageServices) > 0 {
 		c.ui.Say(terminal.WarningColor("Following services do not have any app bound to them:"))
 
@@ -81,7 +83,7 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	}
 }
 
-// CheckUpRoutes performs checkup on currently defined routes in cf cluster
+// CheckUpRoutes performs checkup on currently defined routes in cloudfoundry
 func (c *DoctorPlugin) CheckUpRoutes(cliConnection plugin.CliConnection, triageRoutes []string) []string {
 	results, err := cliConnection.CliCommandWithoutTerminalOutput("routes")
 	if err != nil {
@@ -95,7 +97,7 @@ func (c *DoctorPlugin) CheckUpRoutes(cliConnection plugin.CliConnection, triageR
 			parts := strings.Fields(line)
 
 			if len(parts) == 3 {
-				triageRoutes = append(triageRoutes, "Host: "+parts[1]+" Domain: "+parts[2])
+				triageRoutes = append(triageRoutes, "Host: "+parts[1]+" <--->  Domain: "+parts[2])
 			}
 		}
 
@@ -103,22 +105,24 @@ func (c *DoctorPlugin) CheckUpRoutes(cliConnection plugin.CliConnection, triageR
 	return triageRoutes
 }
 
-// CheckUpServices performs checkup on currently defined services in cf cluster
+// CheckUpServices performs checkup on currently defined services in cloudfoundry
 func (c *DoctorPlugin) CheckUpServices(cliConnection plugin.CliConnection, triageServices []string) []string {
 	results, err := cliConnection.CliCommandWithoutTerminalOutput("services")
 	if err != nil {
 		c.ui.Failed(err.Error())
 	}
-	// FIX ME
+
 	for _, line := range results {
 		// regex to match cf services output and see if there are unbound services
-		match, _ := regexp.MatchString("^\\S*\\s*\\S*\\s*\\S*\\s*\\S*\\s*\\S*", line)
+
+		match, _ := regexp.MatchString("^\\S*\\s*\\S*\\s*\\D*\\s*create succeeded", line)
 		if match {
 			parts := strings.Fields(line)
 
-			if len(parts) == 4 {
-				triageServices = append(triageServices, "Service: "+parts[1]+" Name: "+parts[0])
+			if len(parts) == 5 || len(parts) == 7 {
+				triageServices = append(triageServices, "Service: "+parts[1]+" <--->  Name: "+parts[0])
 			}
+
 		}
 
 	}
@@ -240,7 +244,7 @@ func (c *DoctorPlugin) CFMainChecks(cliConnection plugin.CliConnection) {
 	}
 
 	if cliHasOrg == false || cliHasSpace == false {
-		c.ui.Warn("WARN: It seems that your cf cluster has no space or org...")
+		c.ui.Warn("WARN: It seems that your cloudfoundry has no space or org...")
 	}
 }
 
@@ -274,7 +278,7 @@ func (c *DoctorPlugin) GetMetadata() plugin.PluginMetadata {
 		Commands: []plugin.Command{
 			plugin.Command{
 				Name:     "doctor",
-				HelpText: "doctor is responsible for scanning and reporting about anomalies present your cloudfoundry cluster.",
+				HelpText: "doctor is responsible for scanning and reporting about anomalies present in your cloudfoundry.",
 				// UsageDetails is optional
 				// It is used to show help of usage of each command
 				UsageDetails: plugin.Usage{
