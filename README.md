@@ -18,7 +18,7 @@ After installation just run:
 
 <br>
 ##### Sample output
-![Screenshot](https://raw.github.com/emirozer/cf-doctor-plugin/master/docs/cfdoc.png)
+![Screenshot](https://raw.github.com/emirozer/cf-doctor-plugin/master/docs/ndoc.png)
 <br>
 
 ##Licence
