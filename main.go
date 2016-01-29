@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/cloudfoundry/cli/cf/terminal"
@@ -39,6 +40,8 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	var triageApps []string
 	var triageRoutes []string
 	var triageServices []string
+	var totalNumberOfApps int
+	var totalNumberOfRunningApps int
 
 	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
 	c.ui.Say(terminal.WarningColor("doctor: time to triage cloudfoundry"))
@@ -81,6 +84,23 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 			c.ui.Say(terminal.LogStderrColor(y))
 		}
 	}
+	fmt.Printf("\n")
+	results, err := cliConnection.GetApps()
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+
+	for _, app := range results {
+		if app.State == "started" {
+			totalNumberOfApps++
+			totalNumberOfRunningApps++
+		} else {
+			totalNumberOfApps++
+		}
+	}
+
+	c.ui.Say(terminal.WarningColor("Total Number of Apps: " + strconv.Itoa(totalNumberOfApps)))
+	c.ui.Say(terminal.WarningColor("Total Number of Running Apps: " + strconv.Itoa(totalNumberOfRunningApps)))
 }
 
 // CheckUpRoutes performs checkup on currently defined routes in cloudfoundry
@@ -268,7 +288,7 @@ func (c *DoctorPlugin) GetMetadata() plugin.PluginMetadata {
 		Version: plugin.VersionType{
 			Major: 1,
 			Minor: 0,
-			Build: 1,
+			Build: 2,
 		},
 		MinCliVersion: plugin.VersionType{
 			Major: 6,
