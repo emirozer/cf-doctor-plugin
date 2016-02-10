@@ -21,6 +21,10 @@ After installation just run:
 ##### Sample output
 ![Screenshot](https://raw.github.com/emirozer/cf-doctor-plugin/master/docs/ndoc.png)
 <br>
+<br>
+Optional parameter for triage run on all available spaces in current org:
+    cf doctor --all-spaces
+
 
 ##Licence
 

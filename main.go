@@ -10,6 +10,7 @@ import (
 	"github.com/cloudfoundry/cli/cf/terminal"
 	"github.com/cloudfoundry/cli/plugin"
 	"github.com/cloudfoundry/cli/plugin/models"
+	"github.com/simonleung8/flags"
 )
 
 /*
@@ -37,16 +38,58 @@ type DoctorPlugin struct {
  */
 func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 	fmt.Printf("\n\n")
+
+	var allSpacesRun bool
+	var spaces []string
+
+	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
+	// set flag for all spaces
+	fc := flags.New()
+	fc.NewBoolFlag("all-spaces", "as", "bool all-spaces flag")
+
+	err := fc.Parse(args[1:]...)
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+	// check if the user asked for a all-spaces run or not
+	if fc.IsSet("all-spaces") {
+		allSpacesRun = fc.Bool("all-spaces")
+	}
+
+	c.ui.Say(terminal.WarningColor("doctor: time to triage cloudfoundry"))
+	fmt.Printf("\n")
+	c.CFMainChecks(cliConnection)
+
+	if allSpacesRun {
+		spaces = c.getAllSpacesInCurrentOrg(cliConnection)
+		// get current space so we can restore it for a better ux
+		cliCurrentSpace, err := cliConnection.GetCurrentSpace()
+		if err != nil {
+			c.ui.Failed(err.Error())
+		}
+		for _, s := range spaces {
+			c.ui.Say(terminal.WarningColor("TRIAGE SPACE: " + s))
+			_, err = cliConnection.CliCommandWithoutTerminalOutput("target", "-s", s)
+			if err != nil {
+				c.ui.Failed(err.Error())
+			}
+			c.triageSpace(cliConnection)
+		}
+		_, err = cliConnection.CliCommandWithoutTerminalOutput("target", "-s", cliCurrentSpace.Name)
+		if err != nil {
+			c.ui.Failed(err.Error())
+		}
+	} else {
+		c.triageSpace(cliConnection)
+	}
+}
+
+func (c *DoctorPlugin) triageSpace(cliConnection plugin.CliConnection) {
 	var triageApps []string
 	var triageRoutes []string
 	var triageServices []string
 	var totalNumberOfApps int
 	var totalNumberOfRunningApps int
-
-	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
-	c.ui.Say(terminal.WarningColor("doctor: time to triage cloudfoundry"))
-	fmt.Printf("\n")
-	c.CFMainChecks(cliConnection)
 
 	listOfRunningApps := c.AppsStateRunning(cliConnection)
 	listOfStoppedApps := c.AppsStateStopped(cliConnection)
@@ -101,6 +144,7 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 
 	c.ui.Say(terminal.WarningColor("Total Number of Apps: " + strconv.Itoa(totalNumberOfApps)))
 	c.ui.Say(terminal.WarningColor("Total Number of Running Apps: " + strconv.Itoa(totalNumberOfRunningApps)))
+	fmt.Printf("\n")
 }
 
 // CheckUpRoutes performs checkup on currently defined routes in cloudfoundry
@@ -230,6 +274,7 @@ func (c *DoctorPlugin) AppsStateRunning(cliConnection plugin.CliConnection) []pl
 func (c *DoctorPlugin) AppsStateStopped(cliConnection plugin.CliConnection) []plugin_models.GetAppsModel {
 	var res []plugin_models.GetAppsModel
 	appsListing, err := cliConnection.GetApps()
+
 	if err != nil {
 		c.ui.Failed(err.Error())
 	}
@@ -240,6 +285,20 @@ func (c *DoctorPlugin) AppsStateStopped(cliConnection plugin.CliConnection) []pl
 		}
 	}
 	return res
+}
+
+func (c *DoctorPlugin) getAllSpacesInCurrentOrg(cliConnection plugin.CliConnection) []string {
+	var spaces []string
+	cliSpaces, err := cliConnection.GetSpaces()
+	if err != nil {
+		c.ui.Failed(err.Error())
+	}
+	for _, v := range cliSpaces {
+		spaces = append(spaces, v.Name)
+	}
+
+	return spaces
+
 }
 
 // CFMainChecks is responsible if the environment is okay for running doctor
@@ -264,7 +323,7 @@ func (c *DoctorPlugin) CFMainChecks(cliConnection plugin.CliConnection) {
 	}
 
 	if cliHasOrg == false || cliHasSpace == false {
-		c.ui.Warn("WARN: It seems that your cloudfoundry has no space or org...")
+		c.ui.Warn("WARN: It seems that your cloudfoundry cli has no target space or org...")
 	}
 }
 
@@ -303,6 +362,9 @@ func (c *DoctorPlugin) GetMetadata() plugin.PluginMetadata {
 				// It is used to show help of usage of each command
 				UsageDetails: plugin.Usage{
 					Usage: "cf doctor\n",
+					Options: map[string]string{
+						"all-spaces": "--all-spaces, doctor runs for the all spaces in the current org",
+					},
 				},
 			},
 		},
