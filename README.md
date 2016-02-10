@@ -23,6 +23,7 @@ After installation just run:
 <br>
 <br>
 Optional parameter for triage run on all available spaces in current org:
+
     cf doctor --all-spaces
 
 
