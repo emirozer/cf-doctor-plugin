@@ -7,9 +7,11 @@ import (
 	"strconv"
 	"strings"
 
+	"code.cloudfoundry.org/cli/cf/trace"
+
+	"code.cloudfoundry.org/cli/plugin/models"
 	"github.com/cloudfoundry/cli/cf/terminal"
 	"github.com/cloudfoundry/cli/plugin"
-	"github.com/cloudfoundry/cli/plugin/models"
 	"github.com/simonleung8/flags"
 )
 
@@ -41,8 +43,9 @@ func (c *DoctorPlugin) Run(cliConnection plugin.CliConnection, args []string) {
 
 	var allSpacesRun bool
 	var spaces []string
+	traceLogger := trace.NewLogger(os.Stdout, true, os.Getenv("CF_TRACE"), "")
+	c.ui = terminal.NewUI(os.Stdin, os.Stdout, terminal.NewTeePrinter(os.Stdout), traceLogger)
 
-	c.ui = terminal.NewUI(os.Stdin, terminal.NewTeePrinter())
 	// set flag for all spaces
 	fc := flags.New()
 	fc.NewBoolFlag("all-spaces", "as", "bool all-spaces flag")
@@ -149,13 +152,21 @@ func (c *DoctorPlugin) triageSpace(cliConnection plugin.CliConnection) {
 
 // CheckUpRoutes performs checkup on currently defined routes in cloudfoundry
 func (c *DoctorPlugin) CheckUpRoutes(cliConnection plugin.CliConnection, triageRoutes []string) []string {
+	const NO_ROUTES = "No routes found"
 	results, err := cliConnection.CliCommandWithoutTerminalOutput("routes")
 	if err != nil {
 		c.ui.Failed(err.Error())
 	}
 
 	for _, line := range results {
+		if line == NO_ROUTES {
+			return triageRoutes
+		}
+	}
+
+	for _, line := range results {
 		// regex to match cf routes output and see if there are unbound routes
+
 		match, _ := regexp.MatchString("^[a-zA-Z]*\\s*\\S*\\s*\\S*\\s*", line)
 		if match {
 			parts := strings.Fields(line)
@@ -200,7 +211,7 @@ func (c *DoctorPlugin) CheckUpApps(cliConnection plugin.CliConnection, triage []
 	for _, i := range listOfRunningApps {
 		app, err := cliConnection.GetApp(i.Name)
 		if err != nil {
-			c.ui.Failed(err.Error())
+			triage = append(triage, i.Name+" ___ failed to get app: "+err.Error())
 		}
 
 		if len(app.StagingFailedReason) > 0 {
@@ -347,7 +358,7 @@ func (c *DoctorPlugin) GetMetadata() plugin.PluginMetadata {
 		Version: plugin.VersionType{
 			Major: 1,
 			Minor: 0,
-			Build: 2,
+			Build: 3,
 		},
 		MinCliVersion: plugin.VersionType{
 			Major: 6,
