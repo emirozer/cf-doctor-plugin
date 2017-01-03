@@ -8,6 +8,10 @@ List of all plugins available: <http://plugins.cloudfoundry.org/ui/>
 
 ### Installation
 
+    cf install-plugin -r CF-Community "doctor"
+
+Alternatively:
+
 Get the latest release in binaries depending on your os/arch here: <https://github.com/emirozer/cf-doctor-plugin/releases>
 
 Run **cf install-plugin BINARY_FILENAME** to install a plugin. Replace **BINARY_FILENAME** with the path to and name of the binary file.
