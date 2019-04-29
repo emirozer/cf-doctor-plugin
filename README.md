@@ -1,48 +1,41 @@
-#CloudFoundry CLI Plugin - Doctor
+# CloudFoundry CLI Plugin - Doctor
 
 This plugin is obviously inspired from [brew](http://brew.sh/) doctor :) It will scan your currently `target`ed cloudfoundry space to see if there are anomalies or useful action points that it can report back to you. Current functionality is only focused on apps and routes..
 
 This plugin does *not* change any state or configuration, it merely just scans and gathers information than reports back anomalies.
 
-List of all plugins available: <http://plugins.cloudfoundry.org/ui/>
+## Installation
 
-### Installation
+Install pre-built plugin from <https://plugins.cloudfoundry.org>:
 
-    cf install-plugin -r CF-Community "doctor"
+```plain
+cf install-plugin -r CF-Community "doctor"
+```
 
-Alternatively:
+Alternatively, build and install from source:
 
-Get the latest release in binaries depending on your os/arch here: <https://github.com/emirozer/cf-doctor-plugin/releases>
+```plain
+go get github.com/cloudfoundry/cli
+go get github.com/emirozer/cf-doctor-plugin
+cd $GOPATH/src/github.com/emirozer/cf-doctor-plugin
+go build
+cf install-plugin cf-doctor-plugin
+```
 
-Run **cf install-plugin BINARY_FILENAME** to install a plugin. Replace **BINARY_FILENAME** with the path to and name of the binary file.
+## Usage
 
-After installation just run:
+To triage the current space:
 
-    cf doctor
+```plain
+cf doctor
+```
 
-<br>
-Optional parameter for triage run on all available spaces in current org:
+To triage all available spaces in current org:
 
-    cf doctor --all-spaces
+```plain
+cf doctor --all-spaces
+```
 
-<br>
-##### Sample output
+## Sample output
+
 ![Screenshot](https://raw.github.com/emirozer/cf-doctor-plugin/master/docs/ndoc.png)
-<br>
-
-
-##Licence
-
- Copyright 2015 Emir Ozer
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
